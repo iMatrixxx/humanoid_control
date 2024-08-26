@@ -2,7 +2,7 @@
  * @Author: aoi
  * @Date: 2024-08-26 17:52:32
  * @LastEditors: aoi
- * @LastEditTime: 2024-08-26 19:24:12
+ * @LastEditTime: 2024-08-26 19:43:44
  * @Description: 
  * Copyright (c) Air by aoi, All Rights Reserved. 
  */
@@ -30,6 +30,9 @@ class HumanoidControlInterface : public rclcpp::Node {
   std::shared_ptr<torch::jit::Module> model_rl_;
   std::deque<std::vector<double>> obs_history_;
   at::Tensor action_;
+
+  std::mutex mtx_inference_;  // 
+  std::mutex mtx_control_;  // 
 
 
   //

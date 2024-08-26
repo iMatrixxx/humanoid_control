@@ -2,12 +2,13 @@
  * @Author: aoi
  * @Date: 2024-08-26 17:57:02
  * @LastEditors: aoi
- * @LastEditTime: 2024-08-26 19:28:16
+ * @LastEditTime: 2024-08-26 19:44:21
  * @Description:
  * Copyright (c) Air by aoi, All Rights Reserved.
  */
 #include "../include/humanoid_control_interface.h"
-#include <iostream>  
+
+#include <iostream>
 
 using namespace std::chrono_literals;
 using namespace humanoid;
@@ -55,10 +56,11 @@ bool HumanoidControlInterface::init() {  //
 }
 
 void HumanoidControlInterface::inference() {
+  std::lock_guard<std::mutex> lock(mtx_inference_);
   std::vector<float> input_data;
-  for (auto &vector : obs_history_) {
-    for (auto &element : vector) {
-        input_data.push_back(element);
+  for (auto& vector : obs_history_) {
+    for (auto& element : vector) {
+      input_data.push_back(element);
     }
   }
   torch::Tensor input_tensor = torch::from_blob(input_data.data(), {1, 705});
@@ -67,37 +69,32 @@ void HumanoidControlInterface::inference() {
   action_ = model_rl_->forward({input_tensor}).toTensor();
 
   // 输出结果
-//   for (const auto& tensor : output) {  
-//         std::cout << tensor << std::endl; // 注意：这不会直接打印张量的内容，而是其类型和可能的内存地址  
-//         // 如果你需要打印张量的具体内容，你可能需要使用其他方法，比如遍历其元素  
-//         // 示例：打印第一个张量的第一个元素  
-//         std::cout << "First element of the first tensor: " << tensor[0][0].item<double>() << std::endl;  
-//     }  
+  //   for (const auto& tensor : output) {
+  //         std::cout << tensor << std::endl; //
+  //         注意：这不会直接打印张量的内容，而是其类型和可能的内存地址
+  //         //
+  //         如果你需要打印张量的具体内容，你可能需要使用其他方法，比如遍历其元素
+  //         // 示例：打印第一个张量的第一个元素
+  //         std::cout << "First element of the first tensor: " <<
+  //         tensor[0][0].item<double>() << std::endl;
+  //     }
   std::cout << action_ << std::endl;
-
-
 }
 
 void HumanoidControlInterface::control() {
-static int count = 0;
-count++;
+  std::lock_guard<std::mutex> lock(mtx_control_);
 
-if (count++%10==0) {
-    //create obs
+  static int count = 0;
+  count++;
+
+  if (count++ % 10 == 0) {
+    // create obs
     std::vector<double> obs;
     add_obs(obs);
-  count = 0;
-}
-// 发送action_
-send_command();
-
-
-
-
-
-
-
-
+    count = 0;
+  }
+  // 发送action_
+  send_command();
 }
 
 void HumanoidControlInterface::send_command() {}
