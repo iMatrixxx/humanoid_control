@@ -1,0 +1,12 @@
+struct RealFbLcm
+{
+    // motor feedback
+    float qFb[12];
+    float dqFb[12];
+    float tauFb[12];
+
+    // imu feedback
+    float imu_quat[4];
+    float imu_gyro[3];
+    float imu_acc[3];
+}

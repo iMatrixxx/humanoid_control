@@ -2,15 +2,25 @@
  * @Author: aw
  * @Date: 2024-04-01 06:49:40
  * @LastEditors: aoi
- * @LastEditTime: 2024-08-26 17:59:35
+ * @LastEditTime: 2024-08-26 20:27:53
  * @Description:
  * Copyright (c) Air by aw, All Rights Reserved.
  */
+#include <csignal>
+#include <iostream>
+#include <string>
+
 #include "../include/humanoid_control_interface.h"
 
+
 int main(int argc, char *argv[]) {
+  // std::string robot_name = "fudan_humanoid";
+  // std::cout << "robot name " << robot_name << std::endl;
+  // IOLcm *ioLcmInter = new IOLcm(robot_name);
+
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<humanoid::HumanoidControlInterface>(rclcpp::NodeOptions());
+  auto node = std::make_shared<humanoid::HumanoidControlInterface>(
+      rclcpp::NodeOptions());
   if (!node->init()) {
     RCLCPP_ERROR(rclcpp::get_logger("aw_robot"),
                  "initialize aw_robot_node failed!");

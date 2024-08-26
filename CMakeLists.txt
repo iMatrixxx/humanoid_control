@@ -13,6 +13,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(Torch REQUIRED)
 
 set(src_files
+  "src/lcm02_IO.cpp"
   "src/humanoid_control_interface.cpp"
   "src/main.cpp"
 )
@@ -24,7 +25,7 @@ include_directories(
 
 add_executable(${PROJECT_NAME}_node ${src_files})
 ament_target_dependencies(${PROJECT_NAME}_node rclcpp)
-target_link_libraries(${PROJECT_NAME}_node pthread "${TORCH_LIBRARIES}")
+target_link_libraries(${PROJECT_NAME}_node pthread "${TORCH_LIBRARIES}" lcm)
 
 install(TARGETS
   ${PROJECT_NAME}_node

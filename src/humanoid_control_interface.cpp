@@ -2,12 +2,13 @@
  * @Author: aoi
  * @Date: 2024-08-26 17:57:02
  * @LastEditors: aoi
- * @LastEditTime: 2024-08-26 19:44:21
+ * @LastEditTime: 2024-08-26 19:55:45
  * @Description:
  * Copyright (c) Air by aoi, All Rights Reserved.
  */
 #include "../include/humanoid_control_interface.h"
 
+#include <cmath>
 #include <iostream>
 
 using namespace std::chrono_literals;
@@ -17,24 +18,19 @@ HumanoidControlInterface::HumanoidControlInterface(
     : Node("humanoid_control_node", options) {}
 
 bool HumanoidControlInterface::init() {  //
-
-  // 初始化15个包含47个元素的vector，并将它们添加到obs_history_中
+  obs_history_.resize(0);
   for (int i = 0; i < 15; ++i) {
-    // 创建一个新的std::vector<double>，大小为47，并初始化为0.0（这是默认行为）
     std::vector<double> new_vector(47);
-
-    // 如果需要，你可以在这里设置一个特定的值给所有元素
-    // 例如，将每个元素的值设置为i（注意：这通常不是一个好的选择，因为你会覆盖所有元素为相同的i值）
-    // 但这里我们保持默认值0.0
-
-    // 将这个新的vector添加到deque中
     obs_history_.push_back(new_vector);
   }
-
+  action_.resize(0);
+  for (int i = 0; i < 12; i++) {
+    action_.push_back(0.0);
+  }
   try {
     // 使用 std::make_shared 包装返回的 torch::jit::Module
     model_rl_ = std::make_shared<torch::jit::Module>(torch::jit::load(
-        "/home/imatrix/humanoid_ws/src/humanoid_control/model/model_rl.pt"));
+        "/home/fudanrobotuser/humanoid_ws/src/humanoid_control/model/model_rl.pt"));
   } catch (const c10::Error& e) {
     std::cerr << "Error loading the model: " << e.what() << std::endl;
     return false;
@@ -52,6 +48,12 @@ bool HumanoidControlInterface::init() {  //
       1ms, std::bind(&HumanoidControlInterface::control, this),
       humanoid_control_cb_group_);
 
+  observation_timer_ = this->create_wall_timer(
+      10ms, std::bind(&HumanoidControlInterface::observation, this),
+      humanoid_control_cb_group_);
+
+  ioLcmInter_ = new IOLcm("fudan_humanoid");
+
   return true;
 }
 
@@ -66,42 +68,55 @@ void HumanoidControlInterface::inference() {
   torch::Tensor input_tensor = torch::from_blob(input_data.data(), {1, 705});
 
   // 执行推理
-  action_ = model_rl_->forward({input_tensor}).toTensor();
+  auto action = model_rl_->forward({input_tensor}).toTensor();
+  for (int i = 0; i < 12; i++) {
+    action_[i] = action.index({0, i}).item<double>();
+  }
 
-  // 输出结果
-  //   for (const auto& tensor : output) {
-  //         std::cout << tensor << std::endl; //
-  //         注意：这不会直接打印张量的内容，而是其类型和可能的内存地址
-  //         //
-  //         如果你需要打印张量的具体内容，你可能需要使用其他方法，比如遍历其元素
-  //         // 示例：打印第一个张量的第一个元素
-  //         std::cout << "First element of the first tensor: " <<
-  //         tensor[0][0].item<double>() << std::endl;
-  //     }
-  std::cout << action_ << std::endl;
+  // std::cout << action_ << std::endl;
 }
 
 void HumanoidControlInterface::control() {
   std::lock_guard<std::mutex> lock(mtx_control_);
 
-  static int count = 0;
-  count++;
-
-  if (count++ % 10 == 0) {
-    // create obs
-    std::vector<double> obs;
-    add_obs(obs);
-    count = 0;
-  }
-  // 发送action_
-  send_command();
+  // 发送action_ pd 调节
+  ioLcmInter_->sendOutput(action_);
 }
 
-void HumanoidControlInterface::send_command() {}
+void HumanoidControlInterface::observation() {
+  std::lock_guard<std::mutex> lock(mtx_observation_);
+    // create obs
+    // self.command_input,  # 5 = 2D(sin cos) + 3D(vel_x, vel_y, aug_vel_yaw)
+    // q,    # 12D
+    // dq,  # 12D
+    // self.actions,   # 12D
+    // self.base_ang_vel * self.obs_scales.ang_vel,  # 3
+    // self.base_euler_xyz * self.obs_scales.quat * 0.0,  # 3
+    std::vector<double> obs;  //
+    // 记录结束时间点
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        end - start_time_);
 
-void HumanoidControlInterface::add_obs(const std::vector<double>& obs) {
-  if (obs_history_.size() == 15) {
-    obs_history_.pop_front();  // 移除最旧的元素
-  }
-  obs_history_.push_back(obs);  // 添加新元素
+    obs.push_back(sin(2.0 * M_PI * duration.count() / 500.0));
+    obs.push_back(cos(2.0 * M_PI * duration.count() / 500.0));
+    obs.push_back(0.5);  // command
+    obs.push_back(0.0);  // command
+    obs.push_back(0.0);  // command
+    ioLcmInter_->get_status(obs);
+    for (int i = 0; i < 12; i++) {
+      obs.push_back(action_[i]);
+    }
+    obs.push_back(0.0);  // ang_vel
+    obs.push_back(0.0);
+    obs.push_back(0.0);
+    obs.push_back(0.0);  // euler_xyz
+    obs.push_back(0.0);
+    obs.push_back(0.0);
+
+    //
+    if (obs_history_.size() == 15) {
+      obs_history_.pop_front();  // 移除最旧的元素
+    }
+    obs_history_.push_back(obs);  // 添加新元素
 }

@@ -1,0 +1,11 @@
+struct RealDesLcm
+{
+    // motor des
+    float qDes[12];
+    float dqDes[12];
+    float tauDes[12];
+
+    // pid command
+    float Kp[12];
+    float Kd[12];
+}
