@@ -18,7 +18,7 @@
 class IOLcm
 {
     public:
-        IOLcm(std::string robot_name);
+        IOLcm(const std::string& robot_name);
         ~IOLcm();
         void sendOutput(const std::vector<double> &action);
         // void recvInput();

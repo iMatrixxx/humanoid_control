@@ -2,7 +2,7 @@
  * @Author: aw
  * @Date: 2024-04-01 06:49:40
  * @LastEditors: aoi
- * @LastEditTime: 2024-08-26 20:27:53
+ * @LastEditTime: 2024-08-26 23:20:16
  * @Description:
  * Copyright (c) Air by aw, All Rights Reserved.
  */
@@ -14,10 +14,6 @@
 
 
 int main(int argc, char *argv[]) {
-  // std::string robot_name = "fudan_humanoid";
-  // std::cout << "robot name " << robot_name << std::endl;
-  // IOLcm *ioLcmInter = new IOLcm(robot_name);
-
   rclcpp::init(argc, argv);
   auto node = std::make_shared<humanoid::HumanoidControlInterface>(
       rclcpp::NodeOptions());

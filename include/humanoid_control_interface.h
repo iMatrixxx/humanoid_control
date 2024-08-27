@@ -2,7 +2,7 @@
  * @Author: aoi
  * @Date: 2024-08-26 17:52:32
  * @LastEditors: aoi
- * @LastEditTime: 2024-08-26 19:43:44
+ * @LastEditTime: 2024-08-27 10:58:30
  * @Description:
  * Copyright (c) Air by aoi, All Rights Reserved.
  */
@@ -19,25 +19,24 @@ namespace humanoid {
 class HumanoidControlInterface : public rclcpp::Node {
  public:
   HumanoidControlInterface(const rclcpp::NodeOptions &options);
-
   ~HumanoidControlInterface() = default;
 
-  //
   bool init();
+
+ private:
   void inference();
   void control();
   void observation();
-  // void add_obs(const std::vector<double> &obs);
 
   std::shared_ptr<torch::jit::Module> model_rl_;
   std::deque<std::vector<double>> obs_history_;
   std::vector<double> action_;
 
-  std::mutex mtx_inference_;  //
-  std::mutex mtx_control_;    //
-  std::mutex mtx_observation_;    //
+  std::mutex mtx_inference_;    //
+  std::mutex mtx_control_;      //
+  std::mutex mtx_observation_;  //
 
-  IOLcm *ioLcmInter_;
+  IOLcm ioLcmInter_;
 
   std::chrono::high_resolution_clock::time_point start_time_;
 
